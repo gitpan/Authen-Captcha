@@ -1,5 +1,15 @@
 Revision history for Perl extension Authen::Captcha.
 
+2003-12-17 23:47  jmiller
+
+	* Changes: updated changes - tagged as Rel-1_023
+
+2003-12-17 23:44  jmiller
+
+	* Captcha.pm, t/1.t: Added keep_failures option, to keep the
+	captcha around when the check failes one wants.  Added initial
+	untested sound file support (no distortion yet)
+
 2003-12-04 15:50  jmiller
 
 	* Changes: updated changes - tagged as Rel-1_022

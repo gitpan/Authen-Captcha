@@ -17,7 +17,7 @@ my $temp_imagesdir = 'Captcha/images';
 
 use Test; # (tests => 28);
 
-plan tests => 28;
+plan tests => 32;
 
 use Authen::Captcha;
 ok(1); # If we made it this far, we are fine.
@@ -36,7 +36,8 @@ my $captcha2 = Authen::Captcha->new(
 	output_folder	=> $temp_outputdir,
 	expire  	=> 301,
 	width   	=> 26,
-	height  	=> 36
+	height  	=> 36,
+	keep_failures	=> 1,
 	);
 ok( defined $captcha2, 1, 'new() did not return anything' );
 ok( $captcha2->isa('Authen::Captcha') );
@@ -65,6 +66,10 @@ $captcha->height(36);
 ok( $captcha->height(), '36', "couldn't set height to 36" );
 ok( $captcha2->height(), '36', "couldn't set height to 36" );
 
+$captcha->keep_failures(1);
+ok( $captcha->keep_failures(), '1', "couldn't set keep_failures to 1" );
+ok( $captcha2->keep_failures(), '1', "couldn't set keep_failures to 1" );
+
 my $default_images_folder = $captcha->images_folder();
 $captcha->images_folder($temp_imagesdir);
 ok( $captcha->images_folder(), $temp_imagesdir, "Couldn't override the images_folder to $temp_imagesdir");
@@ -74,6 +79,11 @@ ok( $captcha->images_folder(), $default_images_folder, "Couldn't set the images_
 my ($md5sum,$code) = $captcha->generate_code(5);
 ok( sub { return 1 if (length($code) == 5) }, 1, "didn't set the number of captcha characters correctly" );
 
+# we have keep_failures on, so this should not get rid of the database entry
+my $bad_results = $captcha2->check_code($code . 'x',$md5sum);
+ok( sub { return 1 if ($bad_results == -3) }, 1, "Failed on check_code: it did not fail correctly" );
+$captcha2->keep_failures(0);
+
 my $results = $captcha2->check_code($code,$md5sum);
 # check for different error states
 ok( sub { return 1 if ($results != -3) }, 1, "Failed on check_code: invalid code (code does not match crypt)" );
@@ -81,4 +91,8 @@ ok( sub { return 1 if ($results != -2) }, 1, "Failed on check_code: invalid code
 ok( sub { return 1 if ($results != -1) }, 1, "Failed on check_code: code expired" );
 ok( sub { return 1 if ($results !=  0) }, 1, "Failed on check_code: code not checked (file error)" );
 ok( $results,  1, "Failed on check_code, didn't return 1, but didn't return the other error codes either." );
+
+# we disabled keep_failures, so the check should fail
+my $bad_results2 = $captcha2->check_code($code,$md5sum);
+ok( sub { return 1 if ($bad_results2 == -2) }, 1, "Failed on check_code: disabling keep_failures did not work right, it failed incorrectly" );
 
