@@ -1,5 +1,45 @@
 Revision history for Perl extension Authen::Captcha.
 
+2003-12-02 21:19  jmiller
+
+	* Changes: updated changes - tagged as Rel-1_015
+
+2003-12-02 21:15  jmiller
+
+	* README: updated REAME w/ new documentation format
+
+2003-12-02 21:13  jmiller
+
+	* Captcha.pm: More documentation tweeks
+
+2003-12-02 20:18  sjackson
+
+	* Captcha.pm: Fixing a few right and left brases. Added Josh's name
+	to the Authors, due to the fact that he did all the leg work on
+	getting this up on CPAN.
+
+2003-12-02 19:32  jmiller
+
+	* Changes: updated changes
+
+2003-12-02 19:29  jmiller
+
+	* Captcha.pm, README: Re-ordered documentation. Made SYNOPSIS more
+	minimal.  Correctted new() documentation (you can pass in hash, not
+	a hash referance)
+
+2003-12-02 19:11  jmiller
+
+	* Captcha.pm: POD formatting update.
+
+2003-12-02 14:45  jmiller
+
+	* Captcha.pm: removed useless comment
+
+2003-12-02 14:44  jmiller
+
+	* MANIFEST: added examples to manifest
+
 2003-12-02 11:20  jmiller
 
 	* Changes: updated Changes file, and Tagged as release 1.010

@@ -1,8 +1,8 @@
 package Authen::Captcha;
 
 # $Source: /usr/local/cvs/Captcha/pm/Captcha.pm,v $ 
-# $Revision: 1.11 $
-# $Date: 2003/12/02 19:45:26 $
+# $Revision: 1.15 $
+# $Date: 2003/12/03 02:13:42 $
 # $Author: jmiller $ 
 # License: GNU General Public License Version 2 (see license.txt)
 
@@ -33,7 +33,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 	
 );
 
-$VERSION = sprintf "%d.%03d", q$Revision: 1.11 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%03d", q$Revision: 1.15 $ =~ /(\d+)/g;
 
 
 # Preloaded methods go here.
@@ -72,14 +72,10 @@ sub new
 	if ($os =~ /linux/i)
 	{	# linux os
 		srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
-	}
-	elsif ( ($os =~ /MSWin/i) || ($os =~ /mac/i) )
-	{
+	} elsif ( ($os =~ /MSWin/i) || ($os =~ /mac/i) ) {
 		# windows/mac os...
 		# allowing perl to use what it thinks is a "good" seed
-	}
-	else
-	{
+	} else {
 		# hope we're on unix
 		srand (time ^ $$ ^unpack "%L*", `ps -ef | gzip`);
 	}
@@ -173,7 +169,8 @@ sub datafolder
 }
 
 
-sub checkCode {
+sub checkCode 
+{
 	ref(my $self = shift) or croak "instance variable needed";
 	my ($code, $crypt) = @_;
 
@@ -218,43 +215,36 @@ sub checkCode {
 				 warn "Crypt Found But Expired\n" if($self->debug() >= 2);
 				# the crypt was found but has expired
 				$returnvalue = -1;
-			}
-			else 	
-			{
+			} else {
 				warn "Match Crypt in File Crypt: $crypt\n" if($self->debug() >= 2);
 				$found = 1;
 			}
 			# remove the found crypt so it can't be used again
 			warn "Unlink File: " . $pngfile . "\n" if($self->debug() >= 2);
 			unlink($pngfile);
-		}
-		elsif (($currenttime - $datatime) > $self->expire()){
+		} elsif (($currenttime - $datatime) > $self->expire()) {
 			# removed expired crypt
 			warn "Removing Expired Crypt File: " . $pngfile ."\n" if($self->debug() >= 2);
 			unlink($pngfile);
-		}
-		else
-		{
+		} else {
 			# crypt not found or expired, keep it
 			$newdata .= $fileline."\n";
 		}
 	}
 
-	if ($md5 eq $crypt){
+	if ($md5 eq $crypt)
+	{
 		warn "Match: " . $md5 . " And " . $crypt . "\n" if($self->debug() >= 2);
 		# solution was correct
-		if ($found){
+		if ($found)
+		{
 			# solution was correct and was found in database - passed
 			$returnvalue = 1;
-		}
-		elsif (!$returnvalue)
-		{
+		} elsif (!$returnvalue) {
 			# solution was not found in database
 			$returnvalue = -2;
 		}
-	}
-	else 
-	{
+	} else {
 		warn "No Match: " . $md5 . " And " . $crypt . "\n" if($self->debug() >= 2);
 		# incorrect solution
 		$returnvalue = -3;
@@ -269,7 +259,8 @@ sub checkCode {
 	return $returnvalue;
 }
 
-sub generateCode {
+sub generateCode 
+{
 	ref(my $self = shift) or croak "instance variable needed";
 	my ($length) = @_;
 
@@ -285,14 +276,14 @@ sub generateCode {
 	
 	# generate a new code
 	my $code = "";
-	for(my $i=0; $i < $length; $i++){ 
+	for(my $i=0; $i < $length; $i++)
+	{ 
 		my $char;
 		my $list = int(rand 4) +1;
 		if ($list == 1)
 		{ # choose a number 1/4 of the time
 			$char = int(rand 7)+50;
-		}
-		else { # choose a letter 3/4 of the time
+		} else { # choose a letter 3/4 of the time
 			$char = int(rand 25)+97;
 		}
 		$char = chr($char);
@@ -322,13 +313,12 @@ sub generateCode {
 		my $c = (int(rand ($length*($self->width())))+0);
 		my $d = (int(rand $self->height())+0);
 		my $index = $im->getPixel($a,$b);
-		if ($i < (($length*($self->width())*($self->height())/14+200)/100)){
+		if ($i < (($length*($self->width())*($self->height())/14+200)/100))
+		{
 			$im->line($a,$b,$c,$d,$index);
-		}
-		elsif ($i < (($length*($self->width())*($self->height())/14+200)/2)){
+		} elsif ($i < (($length*($self->width())*($self->height())/14+200)/2)) {
 			$im->setPixel($c,$d,$index);
-		}
-		else{
+		} else {
 			$im->setPixel($c,$d,$black);
 		}
 	}
@@ -418,11 +408,65 @@ __END__
 
 Authen::Captcha - Perl extension for creating captcha's to verify the human element in transactions.
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
 
-Authen::Captcha provides an object oriented interface to captcha file creations.  A Captcha is a program that can generate and grade tests that:
+  use Authen::Captcha;
+
+  # create a new object
+  my $captcha = Authen::Captcha->new();
+
+  # set the datafolder. contains flatfile db to maintain state
+  $captcha->datafolder('/some/folder');
+
+  # set directory to hold publicly accessable images
+  $captcha->outputfolder('/some/http/folder');
+
+  # Alternitively, any of the methods to set variables may also be
+  # used directly in the constructor
+
+  my $captcha = Authen::Captcha->new(
+    datafolder => '/some/folder',
+    outputfolder => '/some/http/folder',
+    );
+
+  # create a captcha. Image filename is "$md5sum.png"
+  my $md5sum = $captcha->generateCode($number_of_characters);
+
+  # check for a valid submitted captcha
+  #   $code is the submitted letter combination guess from the user
+  #   $md5sum is the submitted md5sum from the user (that we gave them)
+  my $results = $captcha->checkCode($code,$md5sum);
+  # $results will be one of:
+  #          1 : Passed
+  #          0 : Code not checked (file error)
+  #         -1 : Failed: code expired
+  #         -2 : Failed: invalid code (not in database)
+  #         -3 : Failed: invalid code (code does not match crypt)
+  ##############
+
+=head1 ABSTRACT
+
+Authen::Captcha provides an object oriented interface to captcha file creations.  Captcha stands for Completely Automated Public Turning test to tell Computers and Humans Apart. A Captcha is a program that can generate and grade tests that:
+
     - most humans can pass.
     - current computer programs can't pass
+
+The most common form is an image file containing distorted text, which humans are adept at reading, and computers (generally) do a poor job.
+This module currently implements that method. We plan to add other methods,
+such as distorted sound files, and plain text riddles.
+
+=head1 REQUIRES
+
+    GD          (see http://search.cpan.org/~lds/GD-2.11/)
+    Digest::MD5 (standard perl module)
+    Carp        (standard perl module)
+
+In most common situations, you'll also want to have:
+
+ A web server (untested on windows, but it should work)
+ cgi-bin or mod-perl access
+ Perl: Perl 5.00503 or later must be installed on the web server.
+ GD.pm 2.01 or later (with PNG support)
 
 =head1 INSTALLATION
 
@@ -445,108 +489,57 @@ Windows users without a working "make" can get nmake from:
 
     ftp://ftp.microsoft.com/Softlib/MSLFILES/nmake15.exe
 
-=head1 SYNOPSIS
-
-  use Authen::Captcha;
-
-  # create a new object
-  my $captcha = Authen::Captcha->new();
-
-  # set the datafolder. contains flatfile db to maintain state
-  $captcha->datafolder('/some/folder');
-
-  # set directory to hold publicly accessable images
-  $captcha->outputfolder('/some/http/folder');
-
-  # optionally adjust the expriration time. Default 300 seconds.
-  $captcha->expire(300);
-  # optionally adjust the output character width. Default 25 pixels.
-  $captcha->width(25);
-  # optionally adjust the output character height. Default 35 pixels.
-  $captcha->height(35);
-  # optionally override the default character and background images
-  # Default: ----SRC_IMAGES----/images
-  $captcha->imagesfolder('/some/folder/holding/pngs');
-  # optionally turn on debugging (0, 1, or 2. 0 is off/default)
-  $captcha->debug(0);
-
-  #   -OR-
-  # you can set all these options from the new() constructor
-
-  my $captcha = Authen::Captcha->new( {
-    datafolder => '/some/folder',
-    outputfolder => '/some/http/folder',
-    expire => 300,
-    width =>  25,
-    height => 35,
-    imagesfolder => '/some/folder/holding/pngs',
-    debug => 0,
-    } );
-
-  # create a captcha. Image filename is "$md5sum.png"
-  my $md5sum = $captcha->generateCode($number_of_characters);
-
-  # if called in array context, it will also return a scalar variable
-  # containing the actual randomly generated characters for this captcha
-  my ($md5sum,$code) = $captcha->generateCode($number_of_characters);
-
-  # check for a valid submitted captcha
-  #   $code is the submitted letter combination guess from the user
-  #   $md5sum is the submitted md5sum from the user (that we gave them)
-  my $results = $captcha->checkCode($code,$md5sum);
-  # $results will be one of:
-  #          1 : Passed
-  #          0 : Code not checked (file error)
-  #         -1 : Failed: code expired
-  #         -2 : Failed: invalid code (not in database)
-  #         -3 : Failed: invalid code (code does not match crypt)
-  ##############
-
-=head1 ABSTRACT
-
-Authen::Captcha provides an object oriented interface to captcha file creations.  A Captcha is a program that can generate and grade tests that:
-    - most humans can pass.
-    - current computer programs can't pass
-
-The most common form is an image file containing distorted text, which humans are adept at reading, and computers (generally) do a poor job.
-This module currently implements that method. We plan to add other methods,
-such as distorted sound files, and plain text riddles.
-
-=head2 EXPORT
-
-None by default.
-
-=head2 REQUIRES
-
-    GD          (see http://search.cpan.org/~lds/GD-2.11/)
-    Digest::MD5 (standard perl module)
-    Carp        (standard perl module)
-
-In most common situations, you'll also want to have:
-
- A web server (untested on windows, but it should work)
- cgi-bin or mod-perl access
- Perl: Perl 5.00503 or later must be installed on the web server.
- GD.pm 2.01 or later (with PNG support)
-
 =head1 METHODS
+
+=head2 MAIN METHODS
 
 =over
 
-=item C<$captcha = Authen::Captcha-E<gt>new;>
+=item C<$captcha = Authen::Captcha-E<gt>new();>
 
 This creates a new Captcha object.
-Optionally, you can pass in a hash referance with configuration information.
+Optionally, you can pass in a hash with configuration information.
 See the method descriptions for more detail on what they mean.
-  {
-    datafolder => '/some/folder', # required
-    outputfolder => '/some/http/folder', # required
-    expire => 300, # optional. default 300
-    width =>  25, # optional. default 25
-    height => 35, # optional. default 35
-    imagesfolder => '/some/folder', # optional. default to lib dir
-    debug => 0, # optional. default 0
-  }
+
+=over 2
+
+   datafolder => '/some/folder', # required
+   outputfolder => '/some/http/folder', # required
+   expire => 300, # optional. default 300
+   width =>  25, # optional. default 25
+   height => 35, # optional. default 35
+   imagesfolder => '/some/folder', # optional. default to lib dir
+   debug => 0, # optional. default 0
+
+=back
+
+=item C<$md5sum = $captcha-E<gt>generateCode( $number_of_characters );>
+
+Creates a captcha. Image filename is "$md5sum.png"
+
+It can also be called in array context to retrieve the string of characters used to generate the captcha (the string the user is expected to respond with). This is useful for debugging.
+ex.
+
+C<($md5sum,$chars) = $captcha-E<gt>generateCode( $number_of_characters );>
+
+=item C<$results = $captcha-E<gt>checkCode($code,$md5sum);>
+
+check for a valid submitted captcha
+$code is the submitted letter combination guess from the user
+$md5sum is the submitted md5sum from the user (that we gave them)
+$results will be one of:
+
+    1 : Passed
+    0 : Code not checked (file error)
+   -1 : Failed: code expired
+   -2 : Failed: invalid code (not in database)
+   -3 : Failed: invalid code (code does not match crypt)
+
+=back
+
+=head2 ACCESSOR METHODS
+
+=over
 
 =item C<$captcha-E<gt>datafolder( '/some/folder' );>
 
@@ -575,26 +568,6 @@ Optional. Number of pixels high for the character graphics. Defaults to 25.
 
 Optional. Number of pixels wide for the character graphics. Defaults to 35.
 
-=item C<$md5sum = $captcha-E<gt>generateCode( $number_of_characters );>
-
-Creates a captcha. Image filename is "$md5sum.png"
-
-It can also be called in array context to retrieve the string of characters used to generate the captcha (the string the user is expected to respond with). This is useful for debugging.
-ex.
-  C<($md5sum,$chars) = $captcha-E<gt>generateCode( $number_of_characters );>
-
-=item C<$results = $captcha-E<gt>checkCode($code,$md5sum);>
-
-check for a valid submitted captcha
-$code is the submitted letter combination guess from the user
-$md5sum is the submitted md5sum from the user (that we gave them)
-$results will be one of:
-    1 : Passed
-    0 : Code not checked (file error)
-   -1 : Failed: code expired
-   -2 : Failed: invalid code (not in database)
-   -3 : Failed: invalid code (code does not match crypt)
-
 =item C<$captcha-E<gt>debug( [0|1|2] );>
 
 Optional. 
@@ -610,9 +583,11 @@ The Captcha project:
 The origonal perl script this came from:
     http://www.firstproductions.com/cgi/
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Seth T. Jackson, E<lt>sjackson@purifieddata.netE<gt>
+
+Josh I. Miller, E<lt>jmiller@purifieddata.netE<gt>
 
 First Productions, Inc. created the cgi-script distributed under the GPL which was used as the basis for this module. Much work has gone into making this more robust, and suitable for other applications, but much of the origonal code remains.
 
