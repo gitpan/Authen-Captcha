@@ -1,8 +1,8 @@
 package Authen::Captcha;
 
 # $Source: /usr/local/cvs/Captcha/pm/Captcha.pm,v $ 
-# $Revision: 1.15 $
-# $Date: 2003/12/03 02:13:42 $
+# $Revision: 1.22 $
+# $Date: 2003/12/04 20:46:12 $
 # $Author: jmiller $ 
 # License: GNU General Public License Version 2 (see license.txt)
 
@@ -11,6 +11,9 @@ use strict;
 use GD;
 use Digest::MD5 qw(md5_hex);
 use Carp;
+# these are used to find default images dir
+use File::Basename;
+use File::Spec;
 
 require Exporter;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
@@ -33,8 +36,16 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 	
 );
 
-$VERSION = sprintf "%d.%03d", q$Revision: 1.15 $ =~ /(\d+)/g;
+$VERSION = sprintf "%d.%03d", q$Revision: 1.22 $ =~ /(\d+)/g;
 
+# get our file name, used to find the default images
+my $default_images_folder;
+{
+	my $this_file = __FILE__;
+	my $this_dir = dirname($this_file);
+	my @this_dirs = File::Spec->splitdir( $this_dir );
+	$default_images_folder = File::Spec->catdir(@this_dirs,'Captcha','images');
+}
 
 # Preloaded methods go here.
 
@@ -48,15 +59,15 @@ sub new
 	my %opts = @_;
 
 	# default character source images
-	my $src_images = (defined($opts{imagesfolder}) && (-d $opts{imagesfolder}))
-	                 ? $opts{imagesfolder} : '----SRC_IMAGES----/images';
-	$self->imagesfolder($src_images);
+	my $src_images = (defined($opts{images_folder}) && (-d $opts{images_folder}))
+	                 ? $opts{images_folder} : $default_images_folder;
+	$self->images_folder($src_images);
 
 	my $debug = (defined($opts{debug}) && ($opts{debug} =~ /^\d+$/))
 	            ? $opts{debug} : 0;
 	$self->debug($debug);
-	$self->datafolder($opts{datafolder}) if($opts{datafolder});
-	$self->outputfolder($opts{outputfolder}) if($opts{outputfolder});
+	$self->data_folder($opts{data_folder}) if($opts{data_folder});
+	$self->output_folder($opts{output_folder}) if($opts{output_folder});
 	my $expire = (defined($opts{expire}) && ($opts{expire} =~ /^\d+$/))
 	             ? $opts{expire} : 300;
 	$self->expire($expire);
@@ -67,18 +78,11 @@ sub new
 	             ? $opts{height} : 35;
 	$self->height($height);
 	
-	# create a random seed
-	my $os = $^O;
-	if ($os =~ /linux/i)
-	{	# linux os
-		srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
-	} elsif ( ($os =~ /MSWin/i) || ($os =~ /mac/i) ) {
-		# windows/mac os...
-		# allowing perl to use what it thinks is a "good" seed
-	} else {
-		# hope we're on unix
-		srand (time ^ $$ ^unpack "%L*", `ps -ef | gzip`);
-	}
+	# create a random seed if perl version less than 5.004
+	if ($] < 5.005)
+	{	# have to seed rand. using a fairly good seed
+		srand( time() ^ ($$ + ($$ << 15)) );
+	}	# else, we're just going to let perl do it's thing
 
 	return $self;
 }
@@ -100,6 +104,7 @@ sub expire
 	ref(my $self = shift) or croak "instance variable needed";
 	if (@_)
 	{
+		croak "expire must be a possitive integer" unless ($_[0] =~ /^\d+$/);
 		$self->{_expire} = $_[0];
 		return $self->{_expire};
 	} else {
@@ -112,6 +117,7 @@ sub width
 	ref(my $self = shift) or croak "instance variable needed";
 	if (@_)
 	{
+		croak "width must be a possitive integer" unless ($_[0] =~ /^\d+$/);
 		$self->{_width} = $_[0];
 		return $self->{_width};
 	} else {
@@ -124,6 +130,7 @@ sub height
 	ref(my $self = shift) or croak "instance variable needed";
 	if (@_)
 	{
+		croak "height must be a possitive integer" unless ($_[0] =~ /^\d+$/);
 		$self->{_height} = $_[0];
 		return $self->{_height};
 	} else {
@@ -131,45 +138,45 @@ sub height
 	}
 }
 
-sub outputfolder
+sub output_folder
 {
 	
 	ref(my $self = shift) or croak "instance variable needed";
 	if (@_)  
 	{   # it's a setter
-		$self->{_outputfolder} = $_[0];
-		return $self->{_outputfolder};
+		$self->{_output_folder} = $_[0];
+		return $self->{_output_folder};
 	} else {
-		return $self->{_outputfolder};
+		return $self->{_output_folder};
 	}
 }
 
-sub imagesfolder
+sub images_folder
 {
    ref(my $self = shift) or croak "instance variable needed";
    if (@_)
    {   # it's a setter
-       $self->{_imagesfolder} = $_[0];
-       return $self->{_imagesfolder};
+       $self->{_images_folder} = $_[0];
+       return $self->{_images_folder};
    } else {
-       return $self->{_imagesfolder};
+       return $self->{_images_folder};
    }
 }
 
-sub datafolder
+sub data_folder
 {
    ref(my $self = shift) or croak "instance variable needed";
    if (@_)
    {   # it's a setter
-       $self->{_datafolder} = $_[0];
-       return $self->{_datafolder};
+       $self->{_data_folder} = $_[0];
+       return $self->{_data_folder};
    } else {
-       return $self->{_datafolder};
+       return $self->{_data_folder};
    }
 }
 
 
-sub checkCode 
+sub check_code 
 {
 	ref(my $self = shift) or croak "instance variable needed";
 	my ($code, $crypt) = @_;
@@ -178,9 +185,12 @@ sub checkCode
 	
 	warn "$code  $crypt\n" if($self->debug() >= 2);
 
-	my $currenttime = time;
-	my $returnvalue = 0;
-	my $databasefile = $self->datafolder() . "/codes.txt";
+	my $current_time = time;
+	my $return_value = 0;
+	my $database_file = File::Spec->catfile($self->data_folder(),"codes.txt");
+
+	# create database file if it doesn't already exist
+	$self->_touch_file($database_file);
 
 	# zeros (0) and ones (1) are not part of the code
 	# they could be confused with (o) and (l), so we swap them in
@@ -189,46 +199,46 @@ sub checkCode
 	my $md5 = md5_hex($code);
 	
 	# pull in current database
-	warn "Open File: $databasefile\n" if($self->debug() >= 2);
-	open (DATA, "<$databasefile")  or die "Can't open File: $databasefile\n";
+	warn "Open File: $database_file\n" if($self->debug() >= 2);
+	open (DATA, "<$database_file")  or die "Can't open File: $database_file\n";
 		flock DATA, 1;  # read lock
 		my @data=<DATA>;
 	close(DATA);
-	warn "Close File: $databasefile\n" if($self->debug() >= 2);
+	warn "Close File: $database_file\n" if($self->debug() >= 2);
 
 	my $passed=0;
-	# $newdata will hold the part of the database we want to keep and 
+	# $new_data will hold the part of the database we want to keep and 
 	# write back out
-	my $newdata = "";
+	my $new_data = "";
 	my $found;
-	foreach my $fileline (@data) 
+	foreach my $line (@data) 
 	{
-		$fileline =~ s/\n//;
-		my ($datatime,$datacode) = split(/::/,$fileline);
+		$line =~ s/\n//;
+		my ($data_time,$data_code) = split(/::/,$line);
 		
-		my $pngfile = $self->outputfolder() . "/" . $datacode . ".png";
-		if ($datacode eq $crypt)
+		my $png_file = File::Spec->catfile($self->output_folder(),$data_code . ".png");
+		if ($data_code eq $crypt)
 		{
 			# the crypt was found in the database
-			if (($currenttime - $datatime) > $self->expire())
+			if (($current_time - $data_time) > $self->expire())
 			{ 
 				 warn "Crypt Found But Expired\n" if($self->debug() >= 2);
 				# the crypt was found but has expired
-				$returnvalue = -1;
+				$return_value = -1;
 			} else {
 				warn "Match Crypt in File Crypt: $crypt\n" if($self->debug() >= 2);
 				$found = 1;
 			}
 			# remove the found crypt so it can't be used again
-			warn "Unlink File: " . $pngfile . "\n" if($self->debug() >= 2);
-			unlink($pngfile);
-		} elsif (($currenttime - $datatime) > $self->expire()) {
+			warn "Unlink File: " . $png_file . "\n" if($self->debug() >= 2);
+			unlink($png_file) or carp("Can't remove png file [$png_file]\n");
+		} elsif (($current_time - $data_time) > $self->expire()) {
 			# removed expired crypt
-			warn "Removing Expired Crypt File: " . $pngfile ."\n" if($self->debug() >= 2);
-			unlink($pngfile);
+			warn "Removing Expired Crypt File: " . $png_file ."\n" if($self->debug() >= 2);
+			unlink($png_file) or carp("Can't remove png file [$png_file]\n");
 		} else {
 			# crypt not found or expired, keep it
-			$newdata .= $fileline."\n";
+			$new_data .= $line."\n";
 		}
 	}
 
@@ -239,36 +249,48 @@ sub checkCode
 		if ($found)
 		{
 			# solution was correct and was found in database - passed
-			$returnvalue = 1;
-		} elsif (!$returnvalue) {
+			$return_value = 1;
+		} elsif (!$return_value) {
 			# solution was not found in database
-			$returnvalue = -2;
+			$return_value = -2;
 		}
 	} else {
 		warn "No Match: " . $md5 . " And " . $crypt . "\n" if($self->debug() >= 2);
 		# incorrect solution
-		$returnvalue = -3;
+		$return_value = -3;
 	}
 
 	# update database
-	open(DATA,">$databasefile")  or die "Can't open File: $databasefile\n";
+	open(DATA,">$database_file")  or die "Can't open File: $database_file\n";
 		flock DATA, 2; # write lock 
-		print DATA $newdata;
+		print DATA $new_data;
 	close(DATA);
 	
-	return $returnvalue;
+	return $return_value;
 }
 
-sub generateCode 
+sub _touch_file
+{
+	ref(my $self = shift) or croak "instance variable needed";
+	my $file = shift;
+	# create database file if it doesn't already exist
+	if (! -e $file)
+	{
+		open (DATA, ">>$file") or die "Can't create File: $file\n";
+		close(DATA);
+	}
+}
+
+sub generate_code 
 {
 	ref(my $self = shift) or croak "instance variable needed";
 	my ($length) = @_;
 
-	my $databasefile = $self->datafolder() . "/codes.txt";	
+	my $database_file = File::Spec->catfile($self->data_folder(),'codes.txt');
 	my $im_width = $self->width();
 
 	# set a variable with the current time
-	my $currenttime = time;
+	my $current_time = time;
 
 	# create a new image and color
 	my $im = new GD::Image(($im_width * $length),$self->height());
@@ -295,8 +317,8 @@ sub generateCode
 	for(my $i=0; $i < $length; $i++)
 	{
 		my $letter = substr($code,$i,1);
-		my $letterpng = $self->imagesfolder() . "/" . $letter . ".png";
-		my $source = new GD::Image($letterpng);
+		my $letter_png = File::Spec->catfile($self->images_folder(),$letter . ".png");
+		my $source = new GD::Image($letter_png);
 		$im->copy($source,($i*($self->width()),0,0,0,$self->width(),$self->height()));
 		my $a = int(rand (int(($self->width())/14)))+0;
 		my $b = int(rand (int(($self->height())/12)))+0;
@@ -325,15 +347,15 @@ sub generateCode
 	
 	# generate a background
 	my $a = int(rand 5)+1;
-	my $backgroundimg = $self->imagesfolder() . "/background" . $a . ".png";
-	my $source = new GD::Image($backgroundimg);
-	my ($backgroundwidth,$backgroundheight) = $source->getBounds();
-	my $b = int(rand (int($backgroundwidth/13)))+0;
-	my $c = int(rand (int($backgroundheight/7)))+0;
-	my $d = int(rand (int($backgroundwidth/13)))+0;
-	my $e = int(rand (int($backgroundheight/7)))+0;
+	my $background_img = File::Spec->catfile($self->images_folder(),"background" . $a . ".png");
+	my $source = new GD::Image($background_img);
+	my ($background_width,$background_height) = $source->getBounds();
+	my $b = int(rand (int($background_width/13)))+0;
+	my $c = int(rand (int($background_height/7)))+0;
+	my $d = int(rand (int($background_width/13)))+0;
+	my $e = int(rand (int($background_height/7)))+0;
 	my $source2 = new GD::Image(($length*($self->width())),$self->height());
-	$source2->copyResized($source,0,0,$b,$c,($length*($self->width())),$self->height(),$backgroundwidth-$b-$d,$backgroundheight-$c-$e);
+	$source2->copyResized($source,0,0,$b,$c,($length*($self->width())),$self->height(),$background_width-$b-$d,$background_height-$c-$e);
 	
 	# merge the background onto the image
 	$im->copyMerge($source2,0,0,0,0,($length*($self->width())),$self->height(),40);
@@ -342,54 +364,51 @@ sub generateCode
 	$im->rectangle(0,0,((($length)*($self->width()))-1),(($self->height())-1),$black);
 
 	# create database file if it doesn't already exist
-	if (! -e $databasefile)
-	{
-		open (DATA, ">>$databasefile") or die "Can't create File: $databasefile\n";
-		close(DATA);
-	}
+	$self->_touch_file($database_file);
 
 	# clean expired codes and images
-	open (DATA, "<$databasefile")  or die "Can't open File: $databasefile\n";
+	open (DATA, "<$database_file")  or die "Can't open File: $database_file\n";
 		flock DATA, 1;  # read lock
 		my @data=<DATA>;
 	close(DATA);
 	
-	my $newdata = "";
-	foreach my $fileline (@data) 
+	my $new_data = "";
+	foreach my $line (@data) 
 	{
-		$fileline =~ s/\n//;
-		my ($datatime,$datacode) = split(/::/,$fileline);
-		if (($currenttime - $datatime) > ($self->expire()) || $datacode  eq $md5)
-		{
-			my $outputdir = $self->outputfolder() . "/" . $datacode . ".png";
-			unlink($outputdir);
+		$line =~ s/\n//;
+		my ($data_time,$data_code) = split(/::/,$line);
+		if ( (($current_time - $data_time) > ($self->expire())) ||
+		     ($data_code  eq $md5) )
+		{	# remove expired captcha, or a dup
+			my $png_file = File::Spec->catfile($self->output_folder(),$data_code . ".png");
+			unlink($png_file) or carp("Can't remove png file [$png_file]\n");
 		} else {
-			$newdata .= $fileline."\n";
+			$new_data .= $line."\n";
 		}
 	}
 	
 	# save the code to database
-	warn "open File: $databasefile\n" if($self->debug() >= 2);
-	open(DATA,">$databasefile")  or die "Can't open File: $databasefile\n";
+	warn "open File: $database_file\n" if($self->debug() >= 2);
+	open(DATA,">$database_file")  or die "Can't open File: $database_file\n";
 		flock DATA, 2; # write lock
-		warn "-->>" . $newdata . "\n" if($self->debug() >= 2);
-		warn "-->>" . $currenttime . "::" . $md5."\n" if($self->debug() >= 2);
-		print DATA $newdata;
-		print DATA $currenttime."::".$md5."\n";
+		warn "-->>" . $new_data . "\n" if($self->debug() >= 2);
+		warn "-->>" . $current_time . "::" . $md5."\n" if($self->debug() >= 2);
+		print DATA $new_data;
+		print DATA $current_time."::".$md5."\n";
 	close(DATA);
-	warn "Close File: $databasefile\n" if($self->debug() >= 2);
+	warn "Close File: $database_file\n" if($self->debug() >= 2);
 	
 	# save the image to file
-	my $outputfile = $self->outputfolder() . "/" . $md5 . ".png";
+	my $output_file = File::Spec->catfile($self->output_folder(),$md5 . ".png");
 	my $png_data = $im->png;
 
-	warn "Open File: $outputfile\n" if($self->debug() >= 2);
-	open (FILE,">$outputfile") or die "Can't open File: $outputfile \n";
+	warn "Open File: $output_file\n" if($self->debug() >= 2);
+	open (FILE,">$output_file") or die "Can't open File: $output_file \n";
 		flock FILE, 2; # write lock
 		binmode FILE;
 		print FILE $png_data;
 	close FILE;
-	warn "Close File: $outputfile\n" if($self->debug() >= 2);
+	warn "Close File: $output_file\n" if($self->debug() >= 2);
 	
 	# return crypt (md5)... or, if they want it, the code as well.
 	return wantarray ? ($md5,$code) : $md5;
@@ -415,27 +434,27 @@ Authen::Captcha - Perl extension for creating captcha's to verify the human elem
   # create a new object
   my $captcha = Authen::Captcha->new();
 
-  # set the datafolder. contains flatfile db to maintain state
-  $captcha->datafolder('/some/folder');
+  # set the data_folder. contains flatfile db to maintain state
+  $captcha->data_folder('/some/folder');
 
   # set directory to hold publicly accessable images
-  $captcha->outputfolder('/some/http/folder');
+  $captcha->output_folder('/some/http/folder');
 
   # Alternitively, any of the methods to set variables may also be
   # used directly in the constructor
 
   my $captcha = Authen::Captcha->new(
-    datafolder => '/some/folder',
-    outputfolder => '/some/http/folder',
+    data_folder => '/some/folder',
+    output_folder => '/some/http/folder',
     );
 
   # create a captcha. Image filename is "$md5sum.png"
-  my $md5sum = $captcha->generateCode($number_of_characters);
+  my $md5sum = $captcha->generate_code($number_of_characters);
 
   # check for a valid submitted captcha
   #   $code is the submitted letter combination guess from the user
   #   $md5sum is the submitted md5sum from the user (that we gave them)
-  my $results = $captcha->checkCode($code,$md5sum);
+  my $results = $captcha->check_code($code,$md5sum);
   # $results will be one of:
   #          1 : Passed
   #          0 : Code not checked (file error)
@@ -459,14 +478,13 @@ such as distorted sound files, and plain text riddles.
 
     GD          (see http://search.cpan.org/~lds/GD-2.11/)
     Digest::MD5 (standard perl module)
-    Carp        (standard perl module)
 
 In most common situations, you'll also want to have:
 
  A web server (untested on windows, but it should work)
  cgi-bin or mod-perl access
  Perl: Perl 5.00503 or later must be installed on the web server.
- GD.pm 2.01 or later (with PNG support)
+ GD.pm (with PNG support)
 
 =head1 INSTALLATION
 
@@ -503,26 +521,26 @@ See the method descriptions for more detail on what they mean.
 
 =over 2
 
-   datafolder => '/some/folder', # required
-   outputfolder => '/some/http/folder', # required
+   data_folder => '/some/folder', # required
+   output_folder => '/some/http/folder', # required
    expire => 300, # optional. default 300
    width =>  25, # optional. default 25
    height => 35, # optional. default 35
-   imagesfolder => '/some/folder', # optional. default to lib dir
+   images_folder => '/some/folder', # optional. default to lib dir
    debug => 0, # optional. default 0
 
 =back
 
-=item C<$md5sum = $captcha-E<gt>generateCode( $number_of_characters );>
+=item C<$md5sum = $captcha-E<gt>generate_code( $number_of_characters );>
 
 Creates a captcha. Image filename is "$md5sum.png"
 
 It can also be called in array context to retrieve the string of characters used to generate the captcha (the string the user is expected to respond with). This is useful for debugging.
 ex.
 
-C<($md5sum,$chars) = $captcha-E<gt>generateCode( $number_of_characters );>
+C<($md5sum,$chars) = $captcha-E<gt>generate_code( $number_of_characters );>
 
-=item C<$results = $captcha-E<gt>checkCode($code,$md5sum);>
+=item C<$results = $captcha-E<gt>check_code($code,$md5sum);>
 
 check for a valid submitted captcha
 $code is the submitted letter combination guess from the user
@@ -541,20 +559,20 @@ $results will be one of:
 
 =over
 
-=item C<$captcha-E<gt>datafolder( '/some/folder' );>
+=item C<$captcha-E<gt>data_folder( '/some/folder' );>
 
 Required. Sets the directory to hold the flatfile database that will be used to store the current non-expired valid captcha md5sum's.
 Must be writable by the process running the script (usually the web server user, which is usually either "apache" or "http"), but should not be accessable to the end user.
 
-=item C<$captcha-E<gt>outputfolder( '/some/folder' );>
+=item C<$captcha-E<gt>output_folder( '/some/folder' );>
 
 Required. Sets the directory to hold the generated Captcha image files. This is usually a web accessable directory so that the user can view the images in here, but it doesn't have to be web accessable (you could be attaching the images to an e-mail for some verification, or some other Captcha implementation).
 Must be writable by the process running the script (usually the web server user, which is usually either "apache" or "http").
 
-=item C<$captcha-E<gt>imagesfolder( '/some/folder' );>
+=item C<$captcha-E<gt>images_folder( '/some/folder' );>
 
 Optional, and may greatly affect the results... use with caution. Allows you to override the default character graphic png's and backgrounds with your own set of graphics. These are used in the generation of the final captcha image file. The defaults are held in:
-    ----SRC_IMAGES----/images
+    [lib install dir]/Authen/Captcha/images
 
 =item C<$captcha-E<gt>expire( 300 );>
 
@@ -574,6 +592,10 @@ Optional.
 Sets the debugging bit. 1 turns it on, 0 turns it off. 2 will print out verbose messages to STDERR.
 
 =back
+
+=head1 TODO
+
+sound file captcha: Incorporating distorted sound file creation.
 
 =head1 SEE ALSO
 

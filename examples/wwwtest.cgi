@@ -10,8 +10,8 @@ my $db_dir = "/var/www/captchadb";
 my $num_of_characters = 5;
 
 my $captcha = Authen::Captcha->new(
-                      outputfolder	=> $output_dir,
-                      datafolder	=> $db_dir
+                      output_folder	=> $output_dir,
+                      data_folder	=> $db_dir
                       );
 
 &main;
@@ -31,7 +31,7 @@ sub main
 
 sub default
 {
-	my $md5sum = $captcha->generateCode($num_of_characters);
+	my $md5sum = $captcha->generate_code($num_of_characters);
 	print header;
 	print "<HTML><HEAD></HEAD><BODY><FORM METHOD=post>
 	<INPUT TYPE=hidden name=crypt value=\"$md5sum\">
@@ -45,7 +45,7 @@ sub default
 sub check_code
 {
 	my ($code,$md5sum) = @_;
-	my $results = $captcha->checkCode($code,$md5sum);
+	my $results = $captcha->check_code($code,$md5sum);
 
 	# $results will be one of:
 	my %result = (

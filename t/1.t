@@ -3,15 +3,21 @@
 
 #########################
 
-my $temp_dir = '/tmp/captcha_temp';
+# figure out where we are, and where we will be storing stuff
+use File::Basename;
+use File::Spec;
+my $file = __FILE__;
+my $this_dir = dirname($file);
+my @this_dirs = File::Spec->splitdir( $this_dir );
+my $temp_dir = File::Spec->catdir(@this_dirs,'captcha_temp');
 my $temp_datadir = "$temp_dir/data";
 my $temp_outputdir = "$temp_dir/img";
-# we set this, cause we have to override the soon to be system wide settings
+# we set this only for testing, it is not actually used
 my $temp_imagesdir = 'Captcha/images';
 
-use Test; # (tests => 27);
+use Test; # (tests => 28);
 
-plan tests => 27;
+plan tests => 28;
 
 use Authen::Captcha;
 ok(1); # If we made it this far, we are fine.
@@ -26,8 +32,8 @@ ok( (-e $temp_outputdir) || mkdir($temp_outputdir) ); # made temp image dir
 
 my $captcha2 = Authen::Captcha->new(
 	debug    	=> 1,
-	datafolder	=> $temp_datadir,
-	outputfolder	=> $temp_outputdir,
+	data_folder	=> $temp_datadir,
+	output_folder	=> $temp_outputdir,
 	expire  	=> 301,
 	width   	=> 26,
 	height  	=> 36
@@ -39,13 +45,13 @@ $captcha->debug(1);
 ok( $captcha->debug(), '1', "couldn't set debug to 1" );
 ok( $captcha2->debug(), '1', "couldn't set debug to 1" );
 
-$captcha->datafolder($temp_datadir);
-ok( $captcha->datafolder(), $temp_datadir, "couldn't set data folder to $temp_datadir" );
-ok( $captcha2->datafolder(), $temp_datadir, "couldn't set data folder to $temp_datadir" );
+$captcha->data_folder($temp_datadir);
+ok( $captcha->data_folder(), $temp_datadir, "couldn't set data folder to $temp_datadir" );
+ok( $captcha2->data_folder(), $temp_datadir, "couldn't set data folder to $temp_datadir" );
 
-$captcha->outputfolder($temp_outputdir);
-ok( $captcha->outputfolder(), $temp_outputdir, "couldn't set data folder to $temp_outputdir" );
-ok( $captcha2->outputfolder(), $temp_outputdir, "couldn't set data folder to $temp_outputdir" );
+$captcha->output_folder($temp_outputdir);
+ok( $captcha->output_folder(), $temp_outputdir, "couldn't set data folder to $temp_outputdir" );
+ok( $captcha2->output_folder(), $temp_outputdir, "couldn't set data folder to $temp_outputdir" );
 
 $captcha->expire(301);
 ok( $captcha->expire(), '301', "couldn't set expire to 301" );
@@ -59,19 +65,20 @@ $captcha->height(36);
 ok( $captcha->height(), '36', "couldn't set height to 36" );
 ok( $captcha2->height(), '36', "couldn't set height to 36" );
 
-# override the default imagesfolder, cause the default where this will
-# be installed is not there yet.
-$captcha->imagesfolder($temp_imagesdir);
-ok( $captcha->imagesfolder(), $temp_imagesdir, "Couldn't override the imagesfolder to $temp_imagesdir");
+my $default_images_folder = $captcha->images_folder();
+$captcha->images_folder($temp_imagesdir);
+ok( $captcha->images_folder(), $temp_imagesdir, "Couldn't override the images_folder to $temp_imagesdir");
+$captcha->images_folder($default_images_folder);
+ok( $captcha->images_folder(), $default_images_folder, "Couldn't set the images_folder back to $default_images_folder");
 
-my ($md5sum,$code) = $captcha->generateCode(5);
+my ($md5sum,$code) = $captcha->generate_code(5);
 ok( sub { return 1 if (length($code) == 5) }, 1, "didn't set the number of captcha characters correctly" );
 
-my $results = $captcha2->checkCode($code,$md5sum);
+my $results = $captcha2->check_code($code,$md5sum);
 # check for different error states
-ok( sub { return 1 if ($results != -3) }, 1, "Failed on checkCode: invalid code (code does not match crypt)" );
-ok( sub { return 1 if ($results != -2) }, 1, "Failed on checkCode: invalid code (not in database)" );
-ok( sub { return 1 if ($results != -1) }, 1, "Failed on checkCode: code expired" );
-ok( sub { return 1 if ($results !=  0) }, 1, "Failed on checkCode: code not checked (file error)" );
-ok( $results,  1, "Failed on checkCode, didn't return 1, but didn't return the other error codes either." );
+ok( sub { return 1 if ($results != -3) }, 1, "Failed on check_code: invalid code (code does not match crypt)" );
+ok( sub { return 1 if ($results != -2) }, 1, "Failed on check_code: invalid code (not in database)" );
+ok( sub { return 1 if ($results != -1) }, 1, "Failed on check_code: code expired" );
+ok( sub { return 1 if ($results !=  0) }, 1, "Failed on check_code: code not checked (file error)" );
+ok( $results,  1, "Failed on check_code, didn't return 1, but didn't return the other error codes either." );
 

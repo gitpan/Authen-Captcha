@@ -1,5 +1,63 @@
 Revision history for Perl extension Authen::Captcha.
 
+2003-12-04 15:50  jmiller
+
+	* Changes: updated changes - tagged as Rel-1_022
+
+2003-12-04 15:46  jmiller
+
+	* Captcha.pm: removed item from TODO - fixing srand() portability
+
+2003-12-04 15:44  jmiller
+
+	* Captcha.pm: added data validation to expire(), width(), and
+	height() to verify set's use a possitive integer.  check_code() -
+	have it creating database file codes.txt if it doesn't exist (touch
+	it).
+
+2003-12-04 15:25  jmiller
+
+	* Captcha.pm, Makefile.PL, t/1.t: Portability update.  Modified
+	directory/file handling to use File::Spec for portable operations. 
+	Added warnings for when unlink's failed.  Made srand() in new() of
+	Captcha.pm more portable.
+
+2003-12-04 11:08  jmiller
+
+	* t/1.t: adjusted test t/1.t... it was writing captcha out to
+	/tmp/captcha_temp/etc, changed it to use t/captcha_temp/etc using
+	__FILE__ to figure out where the test is at.
+
+2003-12-04 00:45  jmiller
+
+	* Captcha.pm, Makefile.PL, t/1.t: Removed nasty hack to hardcode in
+	the lib/Authen/Captcha/images directory. Replaced with the solution
+	that lib/Net/Config.pm uses (thanks to Andrew Savige for helping me
+	out). The new solution uses __FILE__ to find the module's filename,
+	and regex's it into the path to the images directory.
+
+2003-12-03 22:12  jmiller
+
+	* Captcha.pm, examples/wwwtest.cgi, t/1.t: MAJOR INTERFACE CHANGE!
+	method names have changed. All two word method names have been
+	lowercased and split with an underscore for propper style and
+	consistency:	datafolder	=> data_folder	outputfolder	=>
+	output_folder	     imagesfolder    => images_folder	    
+	generateCode	=> generate_code	checkCode	=>
+	check_code Also, though less important, an audit of all variable
+	names in the module has been done in order to put them into the
+	correct naming conventions as well.
+
+2003-12-03 21:53  jmiller
+
+	* Captcha.pm: added TODO to docs
+
+2003-12-03 15:21  jmiller
+
+	* Captcha.pm, Makefile.PL: added PREREQ_PM's to the Makefile.PL,
+	fixed docs on requirements (GD doesn't have to be a 2.x release, I
+	have it working fine on a 1.41 GD)
+
 2003-12-02 21:19  jmiller
 
 	* Changes: updated changes - tagged as Rel-1_015

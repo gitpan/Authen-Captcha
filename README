@@ -8,27 +8,27 @@ SYNOPSIS
       # create a new object
       my $captcha = Authen::Captcha->new();
 
-      # set the datafolder. contains flatfile db to maintain state
-      $captcha->datafolder('/some/folder');
+      # set the data_folder. contains flatfile db to maintain state
+      $captcha->data_folder('/some/folder');
 
       # set directory to hold publicly accessable images
-      $captcha->outputfolder('/some/http/folder');
+      $captcha->output_folder('/some/http/folder');
 
       # Alternitively, any of the methods to set variables may also be
       # used directly in the constructor
 
       my $captcha = Authen::Captcha->new(
-        datafolder => '/some/folder',
-        outputfolder => '/some/http/folder',
+        data_folder => '/some/folder',
+        output_folder => '/some/http/folder',
         );
 
       # create a captcha. Image filename is "$md5sum.png"
-      my $md5sum = $captcha->generateCode($number_of_characters);
+      my $md5sum = $captcha->generate_code($number_of_characters);
 
       # check for a valid submitted captcha
       #   $code is the submitted letter combination guess from the user
       #   $md5sum is the submitted md5sum from the user (that we gave them)
-      my $results = $captcha->checkCode($code,$md5sum);
+      my $results = $captcha->check_code($code,$md5sum);
       # $results will be one of:
       #          1 : Passed
       #          0 : Code not checked (file error)
@@ -54,14 +54,13 @@ ABSTRACT
 REQUIRES
         GD          (see http://search.cpan.org/~lds/GD-2.11/)
         Digest::MD5 (standard perl module)
-        Carp        (standard perl module)
 
     In most common situations, you'll also want to have:
 
      A web server (untested on windows, but it should work)
      cgi-bin or mod-perl access
      Perl: Perl 5.00503 or later must be installed on the web server.
-     GD.pm 2.01 or later (with PNG support)
+     GD.pm (with PNG support)
 
 INSTALLATION
     Download the zipped tar file from:
@@ -91,25 +90,25 @@ METHODS
         hash with configuration information. See the method descriptions for
         more detail on what they mean.
 
-             datafolder => '/some/folder', # required
-             outputfolder => '/some/http/folder', # required
+             data_folder => '/some/folder', # required
+             output_folder => '/some/http/folder', # required
              expire => 300, # optional. default 300
              width =>  25, # optional. default 25
              height => 35, # optional. default 35
-             imagesfolder => '/some/folder', # optional. default to lib dir
+             images_folder => '/some/folder', # optional. default to lib dir
              debug => 0, # optional. default 0
 
-    "$md5sum = $captcha->generateCode( $number_of_characters );"
+    "$md5sum = $captcha->generate_code( $number_of_characters );"
         Creates a captcha. Image filename is "$md5sum.png"
 
         It can also be called in array context to retrieve the string of
         characters used to generate the captcha (the string the user is
         expected to respond with). This is useful for debugging. ex.
 
-        "($md5sum,$chars) = $captcha->generateCode( $number_of_characters
+        "($md5sum,$chars) = $captcha->generate_code( $number_of_characters
         );"
 
-    "$results = $captcha->checkCode($code,$md5sum);"
+    "$results = $captcha->check_code($code,$md5sum);"
         check for a valid submitted captcha $code is the submitted letter
         combination guess from the user $md5sum is the submitted md5sum from
         the user (that we gave them) $results will be one of:
@@ -122,14 +121,14 @@ METHODS
 
   ACCESSOR METHODS
 
-    "$captcha->datafolder( '/some/folder' );"
+    "$captcha->data_folder( '/some/folder' );"
         Required. Sets the directory to hold the flatfile database that will
         be used to store the current non-expired valid captcha md5sum's.
         Must be writable by the process running the script (usually the web
         server user, which is usually either "apache" or "http"), but should
         not be accessable to the end user.
 
-    "$captcha->outputfolder( '/some/folder' );"
+    "$captcha->output_folder( '/some/folder' );"
         Required. Sets the directory to hold the generated Captcha image
         files. This is usually a web accessable directory so that the user
         can view the images in here, but it doesn't have to be web
@@ -138,7 +137,7 @@ METHODS
         writable by the process running the script (usually the web server
         user, which is usually either "apache" or "http").
 
-    "$captcha->imagesfolder( '/some/folder' );"
+    "$captcha->images_folder( '/some/folder' );"
         Optional, and may greatly affect the results... use with caution.
         Allows you to override the default character graphic png's and
         backgrounds with your own set of graphics. These are used in the
@@ -162,6 +161,9 @@ METHODS
     "$captcha->debug( [0|1|2] );"
         Optional. Sets the debugging bit. 1 turns it on, 0 turns it off. 2
         will print out verbose messages to STDERR.
+
+TODO
+    sound file captcha: Incorporating distorted sound file creation.
 
 SEE ALSO
     The Captcha project: http://www.captcha.net/
