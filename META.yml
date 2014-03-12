@@ -1,25 +1,25 @@
---- #YAML:1.0
-name:               Authen-Captcha
-version:            1.023_001
-abstract:           Perl extension for creating captcha's to verify the human element in transactions.
+---
+abstract: "Perl extension for creating captcha's to verify the human element in transactions."
 author:
-    - Seth T. Jackson <sjackson@purifieddata.net>
-license:            unknown
-distribution_type:  module
-configure_requires:
-    ExtUtils::MakeMaker:  0
+  - 'Seth T. Jackson <sjackson@purifieddata.net>'
 build_requires:
-    ExtUtils::MakeMaker:  0
-requires:
-    File::Basename:  0
-    File::Spec:      0.8
-    GD:              0
-    String::Random:  0
-no_index:
-    directory:
-        - t
-        - inc
-generated_by:       ExtUtils::MakeMaker version 6.55_02
+  ExtUtils::MakeMaker: 0
+dynamic_config: 1
+generated_by: 'ExtUtils::MakeMaker version 6.68, CPAN::Meta::Converter version 2.120921'
+license: unknown
 meta-spec:
-    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
-    version:  1.4
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Authen-Captcha
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  File::Basename: 0
+  File::Spec: 0.8
+  GD: 0
+  String::Random: 0
+resources:
+  repository: https://github.com/lkundrak/perl-Authen-Captcha.git
+version: 1.024
